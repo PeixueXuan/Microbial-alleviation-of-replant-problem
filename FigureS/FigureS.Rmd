@@ -1,0 +1,57 @@
+---
+title: "Supporting Information of Figures."
+author: "Peixue Xuan"
+date: "2024/03/02"
+output: html_document
+---
+
+# Figure S2 Location, distribution and tobacco growth of sampling sites. (A) Location and distribution of sampling sites.
+
+library(maptools)
+yunnan <- readShapePoly("yunnan.shp")
+plot(yunnan)
+site <- read.csv("site.txt", sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+points(site$longitude, site$latitude, pch = 19, cex = 1, col = c("blue", "tomato", "deeppink"))
+text(site$longitude, site$latitude, site[ , 1], cex = 1, col = c("blue", "tomato", "deeppink"),
+     pos = c(4, 2, 4, 2, 1))
+text(102, 29, "Yunnan Province", cex = 1)
+
+# Figure S5 Microbial community structure and composition in tobacco field soils in long-term continuous cropping (LTCC, n = 16) and short-term continuous cropping (STCC, n = 18). (A) Canonical analysis of principal coordinates (CAP) of bacterial and fungal (B) community structure.
+
+library(vegan)
+library(ggplot2)
+otu <- read.csv("otu_bac_2020.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+env <- read.delim("env_2020.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+set.seed(1111)
+otu_env_cap <- capscale(otu ~., data = env, dist = "bray")
+anova(otu_env_cap, permutations = 999)
+cap_eig <- otu_env_cap$CCA$eig
+cap_exp <- cap_eig / sum(cap_eig)
+tbcap_otu_scaling1 <- data.frame(summary(otu_env_cap, scaling = 1)$sites[ , 1:2])
+design <- read.delim("design_2020.txt", sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+tbcap_otu_scaling1$sample <- rownames(tbcap_otu_scaling1)
+tbcap_otu_scaling1 <- merge(tbcap_otu_scaling1, design, by = "sample")
+tbcap_otu_scaling1$term <- factor(tbcap_otu_scaling1$term, levels = c("short", "long"))
+cap_plot <- ggplot(tbcap_otu_scaling1, aes(CAP1, CAP2)) +
+  geom_point(aes(color = term), size = 10, alpha = 0.8) +
+  scale_shape_manual(values = c(15,16,17,18)) +
+  scale_color_manual(values = c("#619CFF",  "#F8766D")) +
+  geom_vline(xintercept = 0, lty = 5, color = "gray", size = 0.4) + 
+  geom_hline(yintercept = 0, lty = 5, color = "gray", size = 0.4) +
+  labs(x = paste("CAP1 (", round(cap_exp[1]*100, 2), "% )"), y = paste("CAP2 (", round(cap_exp[2]*100, 2), "% )"), title = "CAP Plot") +
+  theme(panel.grid = element_blank(), panel.background = element_rect(color = "black", fill = "transparent"), legend.key = element_rect(fill = "transparent")) +
+  theme(axis.text = element_text(face = "bold", size = 24, color = "black"), axis.title = element_text(face = "bold", size = 26)) +
+  theme(legend.text = element_text(face = "bold", size = 24), legend.title = element_text(face = "bold", size = 26)) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 30))
+cap_plot
+
+# Figure S6 Heatmap of Spearman’s correlation coefficients correlating fungal taxa enriched in long-term continuous cropping soil and phenolic acid. 
+
+library(psych)
+library(pheatmap)
+pa_enriched_otu <- read.delim("pa_enriched_long_short_genus5_2020.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+pa <- pa_enriched_otu[1:14]
+enriched_otu <- pa_enriched_otu[15:19]
+pa_enriched_otu_corr <- corr.test(enriched_otu, pa, method = "spearman")
+pa_enriched_otu_corr_r <- pa_enriched_otu_corr$r
+pheatmap(pa_enriched_otu_corr_r, color = colorRampPalette(c("navy", "white", "firebrick3"))(256), border_color = NA, scale = "none", cluster_rows = FALSE, cluster_cols = FALSE, angle_col = 45, display_numbers = TRUE, number_format = "%.3f", number_color = "black", fontsize = 10, fontsize_row = 12, fontsize_col = 12)

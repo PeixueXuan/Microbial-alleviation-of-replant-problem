@@ -1,0 +1,79 @@
+---
+title: "Figure 2 Vanillin degradation of two autotoxin-degrading bacteria in mineral salt medium (MSM) (n = 4), and effect of inoculation of two autotoxin-degrading bacteria and their combinations (n = 6) on tobacco seedling growth, autotoxin (vanillin) concentrations and bacterial community structure in short-term continuous cropping (STCC) soil."
+author: "Peixue Xuan"
+date: "2024/03/02"
+output: html_document
+---
+
+# (D) Principal coordinates analysis (PCoA) of bacterial community structure of the treatments of water control (W), vanillin modified soil (A), vanillin + NLJ1 (A1), vanillin + NLJ2 (A2), vanillin + NLJ1 + NLJ2 (AM).
+
+library(vegan)
+library(ggplot2)
+otu <- read.csv("otu_2022_five.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+otu <- data.frame(t(otu))
+design <- read.delim("design_2022_five.txt", sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+bray_dis <- vegdist(otu, method = "bray")
+pcoa <- cmdscale(bray_dis, k = (nrow(otu) - 1), eig = TRUE)
+pcoa_eig <- pcoa$eig
+pcoa_point <- data.frame(pcoa$point)
+pcoa_exp <- pcoa_eig[1:2] / sum(pcoa_eig)
+pcoa_sample_site <- data.frame({pcoa_point})[1:2]
+pcoa_sample_site$sample <- rownames(pcoa_sample_site)
+names(pcoa_sample_site)[1:2] <- c("PCoA1", "PCoA2")
+pcoa_sample_site <- merge(pcoa_sample_site, design, by = "sample", all.x = TRUE)
+pcoa_sample_site$inoculum <- factor(pcoa_sample_site$inoculum, levels = c("autotoxin", "pse", "bur", "mix", "water"))
+pcoa_plot <- ggplot(pcoa_sample_site, aes(PCoA1, PCoA2)) +
+  geom_point(aes(color = inoculum), size = 10, alpha = 0.8) +
+  scale_color_manual(values = c("#FFA500", "#619CFF", "#C673FF", "#F8766D", "#D26516")) +
+  geom_vline(xintercept = 0, lty = 5, color = "gray", size = 0.4) + 
+  geom_hline(yintercept = 0, lty = 5, color = "gray", size = 0.4) +
+  labs(x = paste("PC1 (", round(100 * pcoa_exp[1], 2), "% )"), y = paste("PC2 (", round(100 * pcoa_exp[2], 2), "% )"), title = "Bacteria") +
+  theme(panel.grid = element_blank(), panel.background = element_rect(color = "black", fill = "transparent"), legend.key = element_rect(fill = "transparent")) +
+  theme(axis.text = element_text(face = "bold", size = 24, color = "black"), axis.title = element_text(face = "bold", size = 26, color = "black")) +
+  theme(legend.text = element_text(face = "bold", size = 24, color = "black"), legend.title = element_text(face = "bold", size = 26, color = "black")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 30))
+pcoa_plot
+
+# (E) Volcano plot illustrating differentially abundant bacterial taxa of autotoxin-degrading microbes in vanillin modified soils.
+
+library(vegan)
+library(ggplot2)
+library(dplyr)
+x <- read.delim("x_bur_a_2022_five.txt", sep="\t", header=T, row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+x$level <- as.factor(ifelse(x$sig == 1, "enriched", ifelse(x$sig == -1, "depleted", "nosignificance")))
+x$otuid <- rownames(x)
+x$neglogp <- -log10(x$PValue)
+taxonomy <- read.delim("taxonomy_2022_five.txt", sep="\t", header=T, row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+taxonomy$otuid <- rownames(taxonomy)
+taxonomy <- arrange(taxonomy, Phylum, Class, Order, Family, Genus, Species)
+rownames(taxonomy) <- taxonomy$otuid
+idx <- rownames(taxonomy) %in% x$otuid
+taxonomy <- taxonomy[idx, ]
+dim(taxonomy)
+x <- x[rownames(taxonomy), ]
+x$Genus <- gsub("[\\[\\]]+", "", taxonomy$Genus, perl = TRUE)
+top_genus <- c("Pseudomonas", "Burkholderia")
+x[!(x$Genus %in% top_genus), ]$Genus <- "Others"
+x$otuid <- factor(x$otuid, levels = x$otuid)
+x$level <- factor(x$level, levels = c("enriched", "nosignificance", "depleted"))
+x$Genus <- factor(x$Genus, levels = c(top_genus, "Others"))
+fdr <- min(x$neglogp[x$level == "enriched"])
+x$level <- as.factor(ifelse(x$sig == 1, "enriched", ifelse(x$sig == -1, "depleted", "no-significance")))
+vol_plot <- ggplot(x, aes(x = logFC, y = neglogp, color = Genus, shape = level)) +
+  geom_point(size = 5) +
+  geom_hline(yintercept = fdr, linetype = 2, color = "black") +
+  scale_shape_manual(values = c(16,17,15)) +
+  scale_color_manual(values = c("deeppink", "blue", "gray")) +
+  guides(color = guide_legend(order = 1), shape = guide_legend(order = 2)) +
+  xlim(-12, 12) +
+  labs(x = "log2 (Fold change)", y = "-log10 (P Value)") +
+  theme(panel.grid = element_blank(), panel.background = element_rect(color = "black", fill = "transparent"), legend.key = element_rect(fill = "transparent")) +
+  theme(axis.text = element_text(face = "bold", size = 20, color = "black"), axis.title = element_text(face = "bold", size = 22, color = "black")) +
+  theme(legend.text = element_text(face = "bold", size = 20), legend.title = element_text(face = "bold", size = 22))
+vol_plot
+
+# (F) Heatmap of Spearman’s correlation coefficients between vanillin and the bacterial taxa differentially abundant in STCC soil treated with autotoxin-degrading microbes.
+
+library(pheatmap)
+pa_enriched_otu_corr_r <- read.delim("pa_enriched_mix_a_corr_r2_2022_five.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+pheatmap(pa_enriched_otu_corr_r, color = colorRampPalette(c("navy", "white","orchid3"))(256), border_color = NA, scale = "none", cluster_rows = FALSE, cluster_cols = FALSE, angle_col = 0, display_numbers = TRUE, number_format = "%.3f", number_color = "black", fontsize = 10, fontsize_row = 12, fontsize_col = 12)

@@ -1,0 +1,4 @@
+city	longitude	latitude
+NLJ	103.217	25.283
+BQ	103.25	24.667
+TD	102.1	24.267
