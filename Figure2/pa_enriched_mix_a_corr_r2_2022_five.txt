@@ -1,3 +1,0 @@
-	XLS
-Pseudomonas	-0.484105879016577
-Burkholderia	-0.484554358045671
