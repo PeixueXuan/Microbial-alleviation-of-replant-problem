@@ -1,0 +1,52 @@
+---
+title: "Figure 1 Phenolic acids content and soil acidification in tobacco field soils in long-term continuous cropping (LTCC, n = 16) and short-term continuous cropping (STCC, n = 18), correlation between LTCC-differentially abundant bacterial taxa and phenolic acids, and effect of LTCC (n = 6) soil on tobacco seedling growth, autotoxin (vanillin) content and bacterial community in STCC (n = 6) soil."
+author: "Peixue Xuan"
+date: "2024/03/03"
+output: html_document
+---
+
+## (C) Heatmap of Spearman’s correlation coefficients correlating bacterial taxa differentially abundant in LTCC soil and phenolic acid.
+
+library(psych)
+library(pheatmap)
+pa_enriched_otu <- read.delim("pa_enriched_long_short_genus19_2020.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+pa <- pa_enriched_otu[1:14]
+enriched_otu <- pa_enriched_otu[15:33]
+pa_enriched_otu_corr <- corr.test(enriched_otu, pa, method = "spearman")
+pa_enriched_otu_corr_r <- pa_enriched_otu_corr$r
+pheatmap(pa_enriched_otu_corr_r, color = colorRampPalette(c("navy", "white", "firebrick3"))(256), border_color = NA, scale = "none", cluster_rows = FALSE, cluster_cols = FALSE, angle_col = 45, display_numbers = TRUE, number_format = "%.3f", number_color = "black", fontsize = 10, fontsize_row = 12, fontsize_col = 12)
+
+## (F) Principal coordinates analysis (PCoA) of bacterial community structure (metagenomic sequencing) in STCC (L0), a mixture of 10% LTCC and 90% STCC (L10) and LTCC (L100) soils.
+
+library(vegan)
+library(ggplot2)
+otu <- read.csv("otu_2022_three.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+otu <- data.frame(t(otu))
+design <- read.delim("design_2022_three.txt", sep="\t", stringsAsFactors=FALSE, check.names=FALSE)
+bray_dis <- vegdist(otu, method = "bray")
+pcoa <- cmdscale(bray_dis, k = (nrow(otu) - 1), eig = TRUE)
+pcoa_eig <- pcoa$eig
+pcoa_point <- data.frame(pcoa$point)
+pcoa_exp <- pcoa_eig[1:2] / sum(pcoa_eig)
+pcoa_sample_site <- data.frame({pcoa_point})[1:2]
+pcoa_sample_site$sample <- rownames(pcoa_sample_site)
+names(pcoa_sample_site)[1:2] <- c("PCoA1", "PCoA2")
+pcoa_sample_site <- merge(pcoa_sample_site, design, by = "sample", all.x = TRUE)
+pcoa_sample_site$term <- factor(pcoa_sample_site$term, levels = c("short", "mix", "long"))
+pcoa_plot <- ggplot(pcoa_sample_site, aes(PCoA1, PCoA2)) +
+  geom_point(aes(color = term), size = 10, alpha = 0.8) +
+  scale_color_manual(values = c("#619CFF", "#C673FF", "#F8766D")) +
+  geom_vline(xintercept = 0, lty = 5, color = "gray", size = 0.4) + 
+  geom_hline(yintercept = 0, lty = 5, color = "gray", size = 0.4) +
+  labs(x = paste("PC1 (", round(100 * pcoa_exp[1], 2), "% )"), y = paste("PC2 (", round(100 * pcoa_exp[2], 2), "% )"), title = "Bacteria") +
+  theme(panel.grid = element_blank(), panel.background = element_rect(color = "black", fill = "transparent"), legend.key = element_rect(fill = "transparent")) +
+  theme(axis.text = element_text(face = "bold", size = 24, color = "black"), axis.title = element_text(face = "bold", size = 26, color = "black")) +
+  theme(legend.text = element_text(face = "bold", size = 24, color = "black"), legend.title = element_text(face = "bold", size = 26, color = "black")) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 30))
+pcoa_plot
+
+## (G) Heatmap of Spearman’s correlation coefficients between vanillin and the bacterial taxa (metagenomic sequencing) differentially abundant in L100 and L10 soils treated with autotoxin.
+
+library(pheatmap)
+pa_enriched_otu_corr_r <- read.delim("pa_enriched_long_short_genus9_2022_three.txt", sep="\t", row.names=1, stringsAsFactors=FALSE, check.names=FALSE)
+pheatmap(pa_enriched_otu_corr_r, color = colorRampPalette(c("navy", "white","orchid3"))(256), border_color = NA, scale = "none", cluster_rows = FALSE, cluster_cols = FALSE, angle_col = 0, display_numbers = TRUE, number_format = "%.3f", number_color = "black", fontsize = 10, fontsize_row = 12, fontsize_col = 12)
